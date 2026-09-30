@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: passa-a-bola-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: MAX_REQUESTS_PER_IP
+        value: "6"
+      - key: MAX_GENERATIONS_PER_DAY
+        value: "100"
+      - key: MAX_CONCURRENT
+        value: "3"
