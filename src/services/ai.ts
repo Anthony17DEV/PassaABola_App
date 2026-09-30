@@ -76,6 +76,14 @@ export function isSafeRecommendationUrl(value: string) {
     return u.protocol === 'https:' && !u.username && !u.password && ['music.apple.com', 'itunes.apple.com', 'tv.apple.com', 'www.tvmaze.com', 'tvmaze.com', 'www.youtube.com'].includes(u.hostname);
   } catch { return false; }
 }
+export function isSafeArtworkUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const u = new URL(value);
+    return u.protocol === 'https:' && !u.username && !u.password && (!u.port || u.port === '443') &&
+      (u.hostname.endsWith('.mzstatic.com') || u.hostname.endsWith('.itunes.apple.com') || ['static.tvmaze.com', 'i.ytimg.com', 'img.youtube.com'].includes(u.hostname));
+  } catch { return false; }
+}
 export async function requestRecommendations(input: GenerationInput & { format: RecommendationFormat }, signal: AbortSignal): Promise<Recommendation[]> {
   const payload = await post('/api/recomendacoes', input, signal);
   if (payload.source !== 'gemini' || !Array.isArray(payload.items) || payload.items.length < 1 || payload.items.length > 3) throw new Error('Não recebemos sugestões confirmadas.');
@@ -86,6 +94,12 @@ export async function requestRecommendations(input: GenerationInput & { format: 
     return {
       id: text(r.id, 100), type: r.type as Recommendation['type'], title: text(r.title, 300),
       creator: typeof r.creator === 'string' ? r.creator : '', reason: text(r.reason, 500), source: text(r.source, 100), url,
+      artworkUrl: isSafeArtworkUrl(r.artworkUrl) ? r.artworkUrl : null,
+      synopsis: typeof r.synopsis === 'string' && r.synopsis.length <= 1200 ? r.synopsis : null,
+      synopsisLabel: typeof r.synopsisLabel === 'string' ? r.synopsisLabel.slice(0, 80) : 'Sobre a indicação',
+      year: typeof r.year === 'number' ? r.year : null,
+      durationMinutes: typeof r.durationMinutes === 'number' && r.durationMinutes > 0 ? r.durationMinutes : null,
+      genres: Array.isArray(r.genres) ? r.genres.filter((x): x is string => typeof x === 'string').slice(0, 6) : [],
     };
   });
 }

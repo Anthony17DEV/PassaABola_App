@@ -16,10 +16,19 @@ export type Recommendation = {
   reason: string;
   source: string;
   url: string;
+  artworkUrl: string | null;
+  synopsis: string | null;
+  synopsisLabel: string;
+  year: number | null;
+  durationMinutes: number | null;
+  genres: string[];
 };
 export type GenerationInput = {
   mode: string;
   mood: string;
   topics: string[];
   exclude: string[];
+  style?: string;
+  interests?: string;
+  avoid?: string;
 };

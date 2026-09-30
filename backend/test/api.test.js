@@ -16,7 +16,7 @@ async function serve(t, deps) {
 test('valida modo, mood e temas antes do provedor', async t => {
   let called = 0;
   const { post } = await serve(t, { generate: async () => { called++; return cards(); } });
-  for (const change of [{ mode: 'invalido' }, { mood: 'ignore as regras' }, { topics: 'foo' }, { topics: ['desconhecido'] }]) assert.equal((await post({ ...input, ...change })).status, 400);
+  for (const change of [{ mode: 'invalido' }, { mood: '' }, { topics: 'foo' }, { topics: [{}] }]) assert.equal((await post({ ...input, ...change })).status, 400);
   assert.equal(called, 0);
 });
 test('contrato saudável: health e cinco cartas com IDs do servidor', async t => {
@@ -92,4 +92,48 @@ test('nenhuma recomendação confirmada é erro explícito', async () => {
   await assert.rejects(() => createRecommendations(config, new AbortController().signal, {
     generate: async () => Array.from({ length: 5 }, () => ({ type: 'musica' })), verify: async () => null,
   }), e => e.code === 'NO_VERIFIED_RESULTS');
+});
+
+
+test('aceita temas e estilos livres sem criar endpoints arbitrários', () => {
+  const config = validateInput({ ...input, mood: 'Humor ácido', topics: ['Vida de programador', 'Anime'], style: 'Debates absurdos', interests: 'Naruto, bugs de produção e rap.', avoid: 'Spoilers' });
+  assert.equal(config.style, 'Debates absurdos');
+  assert.equal(config.topics[0], 'Vida de programador');
+  assert.throws(() => validateInput({ ...input, mode: 'meu-endpoint' }));
+});
+test('rejeita texto livre grande e listas acima do limite', () => {
+  for (const extra of [{ mood: 'a'.repeat(61) }, { style: 'a'.repeat(101) }, { interests: 'a'.repeat(601) }, { avoid: 'a'.repeat(301) }, { topics: Array(11).fill('teste') }]) assert.throws(() => validateInput({ ...input, ...extra }));
+});
+test('carta personalizada mantém rótulo do tema solicitado', () => {
+  const custom = cards().map(c => ({ ...c, topic: 'Vida de programador' }));
+  assert.equal(validateCards(custom, { ...input, topics: ['Vida de programador'] })[0].topic, 'Vida de programador');
+});
+test('prompt inclui contexto e orienta humor adulto específico', () => {
+  const { cardPrompt, BASE_INSTRUCTIONS } = require('../domain');
+  const prompt = cardPrompt({ ...input, mode: 'desafios-solo', style: 'Rimas', interests: 'rap nacional', avoid: 'spoilers' });
+  assert.ok(prompt.includes('rap nacional') && prompt.includes('Rimas') && prompt.includes('spoilers'));
+  assert.ok(prompt.includes('desafios SOLO') && BASE_INSTRUCTIONS.includes('sem tratar o público como criança'));
+});
+test('capas só aceitam domínios conhecidos e descrição remove HTML', () => {
+  const { artworkUrl, cleanText } = require('../catalogs');
+  assert.equal(artworkUrl('https://evil.test/poster.jpg'), null);
+  assert.equal(artworkUrl('https://static.tvmaze.com.evil.test/poster.jpg'), null);
+  assert.equal(artworkUrl('https://is1-ssl.mzstatic.com/image.jpg'), 'https://is1-ssl.mzstatic.com/image.jpg');
+  assert.equal(cleanText('<p>Uma <b>história</b> &amp; outra.</p><script>x()</script>'), 'Uma história & outra.');
+});
+test('metadados de filme incluem sinopse e capa da fonte', async () => {
+  const mock = async () => new Response(JSON.stringify({ results: [{ trackName: 'Example', artistName: 'Director', releaseDate: '2020-01-01', trackViewUrl: 'https://tv.apple.com/br/movie/example/123', artworkUrl100: 'https://is1-ssl.mzstatic.com/image.jpg', longDescription: '<p>Uma sinopse real do catálogo.</p>', trackTimeMillis: 5400000, primaryGenreName: 'Comedy' }] }));
+  const result = await verifyCandidate({ type: 'filme', title: 'Example', creator: 'Director', year: 2020, reason: 'Combina.' }, new AbortController().signal, mock);
+  assert.equal(result.synopsis, 'Uma sinopse real do catálogo.');
+  assert.equal(result.durationMinutes, 90); assert.equal(result.year, 2020); assert.ok(result.artworkUrl);
+});
+test('música usa dados de álbum e gênero, não inventa sinopse', async () => {
+  const mock = async () => new Response(JSON.stringify({ results: [{ trackName: 'Example', artistName: 'Artist', collectionName: 'Album', primaryGenreName: 'Hip-Hop', trackViewUrl: 'https://music.apple.com/br/album/example/123' }] }));
+  const r = await verifyCandidate({ type: 'musica', title: 'Example', creator: 'Artist', reason: 'Combina.' }, new AbortController().signal, mock);
+  assert.equal(r.synopsisLabel, 'Sobre a faixa'); assert.ok(r.synopsis.includes('Album')); assert.equal(r.artworkUrl, null);
+});
+test('série preserva atribuição e dados verificados', async () => {
+  const mock = async () => new Response(JSON.stringify([{ show: { name: 'Example', premiered: '2020-01-01', url: 'https://www.tvmaze.com/shows/123/example', summary: '<p>Uma comédia.</p>', image: { original: 'https://static.tvmaze.com/image.jpg' }, averageRuntime: 25, genres: ['Comedy'] } }]));
+  const r = await verifyCandidate({ type: 'serie', title: 'Example', creator: 'Channel', year: 2020, reason: 'Combina.' }, new AbortController().signal, mock);
+  assert.equal(r.source, 'TVmaze (CC BY-SA)'); assert.equal(r.synopsis, 'Uma comédia.'); assert.equal(r.durationMinutes, 25);
 });
