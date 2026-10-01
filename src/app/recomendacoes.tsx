@@ -86,7 +86,7 @@ function Recommendations({ mood, topicsRaw, format, preferences }: { mood: strin
 						{error && <View style={s.card}><Text style={s.cardTitle}>Não deu pra buscar agora</Text><Text style={s.description}>{error}</Text></View>}
 						{items.map(item => <RecommendationCard key={item.id} item={item} onOpen={() => void open(item)} />)}
 						<Text style={s.description}>Os links abrem as fontes. Disponibilidade para assistir ou ouvir e preços podem variar.</Text>
-						{items.some(x => ['filme', 'serie', 'documentario'].includes(x.type)) && <Text style={s.source}>Dados e Onde Assistir: TMDB e JustWatch.</Text>}
+						{items.some(x => x.type === 'serie') && <Text style={s.source}>Dados de séries: TVmaze • CC BY-SA. O link do card identifica a fonte.</Text>}
 						<Pressable accessibilityRole="button" onPress={() => void load()} style={s.button}><Text style={s.buttonText}>{error ? 'Tentar novamente' : 'Manda outras ↗'}</Text></Pressable>
 					</>
 				)}
@@ -112,26 +112,13 @@ function RecommendationCard({ item, onOpen }: { item: any; onOpen: () => void })
 			<Text style={s.cardTitle}>{item.title}</Text>
 			{!!item.creator && <Text style={s.description}>{item.creator}</Text>}
 			<Text style={s.metadata}>{[item.year, item.durationMinutes ? `${item.durationMinutes} min${item.type === 'serie' ? '/episódio' : ''}` : null, ...item.genres].filter(Boolean).join(' • ')}</Text>
-
-			{/* Logos de Onde Assistir */}
-			{item.providers && item.providers.length > 0 && (
-				<View style={s.providersRow}>
-					<Text style={s.providersLabel}>ONDE ASSISTIR:</Text>
-					<View style={s.providersList}>
-						{item.providers.map((p: any) => (
-							<Image key={p.name} source={{ uri: p.logo }} style={s.providerLogo} contentFit="cover" accessibilityLabel={p.name} />
-						))}
-					</View>
-				</View>
-			)}
-
 			<Text style={s.sectionLabel}>POR QUE COMBINA CONTIGO</Text>
 			<Text style={s.reason}>{item.reason}</Text>
 			<Text style={s.sectionLabel}>{item.synopsisLabel.toUpperCase()}</Text>
 			<Text numberOfLines={expanded ? undefined : 5} style={s.description}>{item.synopsis || 'Essa fonte não disponibilizou uma descrição.'}</Text>
 			{!!item.synopsis && item.synopsis.length > 220 && <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(x => !x)} style={s.readMore}><Text style={s.readMoreText}>{expanded ? 'Mostrar menos −' : 'Ler mais +'}</Text></Pressable>}
 			<Text style={s.source}>Fonte: {item.source}</Text>
-			<Pressable accessibilityRole="link" onPress={onOpen} style={s.button}><Text style={s.buttonText}>{item.type === 'video' ? 'Abrir no YouTube ↗' : item.type === 'musica' ? 'Abrir música na fonte ↗' : 'Ver na fonte ↗'}</Text></Pressable>
+			<Pressable accessibilityRole="link" onPress={onOpen} style={s.button}><Text style={s.buttonText}>{item.type === 'video' ? 'Abrir no YouTube ↗' : item.type === 'musica' ? 'Abrir música na fonte ↗' : 'Ver no catálogo ↗'}</Text></Pressable>
 		</View>
 	</View>;
 }
@@ -145,10 +132,6 @@ const s = StyleSheet.create({
 	imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
 	placeholderIcon: { color: '#BCA5F5', fontSize: 64 },
 	metadata: { color: '#B4C0B8', fontSize: 13, lineHeight: 20, marginTop: 10 },
-	providersRow: { marginTop: 24, backgroundColor: '#101A14', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#2B3D31' },
-	providersLabel: { color: '#BCA5F5', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, marginBottom: 12 },
-	providersList: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
-	providerLogo: { width: 44, height: 44, borderRadius: 10 },
 	sectionLabel: { color: '#BCA5F5', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 24 },
 	readMore: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start' },
 	readMoreText: { color: '#B7F34A', fontSize: 14, fontWeight: '700' },
