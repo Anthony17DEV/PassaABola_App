@@ -51,13 +51,8 @@ function validateCards(raw, input) {
 	const seen = new Set(input.exclude.map(normalize));
 	return raw.map(item => {
 		if (!item || typeof item !== 'object') requireText(null);
-
-		// O SEGREDO TÁ AQUI: Aceitar os temas de forma amigável
 		let topic = requireText(item.topic, 100);
-		if (input.topics.length && !input.topics.includes(topic)) {
-			// Se a IA inventar um tema diferente, a gente força pro primeiro tema escolhido e não dá erro!
-			topic = input.topics[0];
-		}
+		if (input.topics.length && !input.topics.includes(topic)) topic = input.topics[0]; // Força o tema se a IA inventar
 
 		const question = requireText(item.question, 600);
 		const signature = normalize(question);
@@ -65,7 +60,6 @@ function validateCards(raw, input) {
 		seen.add(signature);
 
 		const isAction = ['desafios-solo', 'missoes', 'passa-a-bola'].includes(input.mode);
-
 		return {
 			id: randomUUID(), topic, moods: [input.mood], question,
 			followUp: requireText(item.followUp, 600),
@@ -81,14 +75,20 @@ const cardSchema = {
 	items: { type: 'OBJECT', properties: { topic: str, question: str, followUp: str, groupFollowUp: str }, required: ['topic', 'question', 'followUp', 'groupFollowUp'] },
 };
 
+// VORTAMOS PRO BÁSICO: IA SÓ GERA ISSO AQUI E FICA RÁPIDO
 const recommendationSchema = {
-	type: 'ARRAY', minItems: 1, maxItems: 3,
+	type: 'ARRAY',
+	description: 'Lista com exatamente 5 recomendações',
 	items: {
-		type: 'OBJECT', properties: {
+		type: 'OBJECT',
+		properties: {
 			type: { type: 'STRING', enum: ['filme', 'serie', 'musica', 'video'] },
-			title: str, creator: str, year: { type: 'INTEGER' }, reason: str, synopsis: str
-		}, required: ['type', 'title', 'creator', 'year', 'reason', 'synopsis']
-	},
+			title: str,
+			creator: str,
+			reason: str
+		},
+		required: ['type', 'title', 'creator', 'reason']
+	}
 };
 
 const BASE_INSTRUCTIONS = `Você é o roteirista brasileiro do Passa a Bola, um app de entretenimento voltado para a cultura canábica (maconheiros, galera que curte uma brisa e dar boas risadas).
