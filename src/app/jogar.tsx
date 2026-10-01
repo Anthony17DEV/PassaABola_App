@@ -383,7 +383,7 @@ function CardSession({ config, players }: { config: Omit<GenerationInput, 'exclu
 							]}
 						>
 							<Text style={styles.primaryText}>
-								{isChallenge && !isGroup ? "Concluir. Próximo ?" : "Passar a bola ?"}
+								{isChallenge && !isGroup ? "Concluir. Próximo" : "Passar a bola"}
 							</Text>
 						</Pressable>
 
@@ -392,7 +392,7 @@ function CardSession({ config, players }: { config: Omit<GenerationInput, 'exclu
 							onPress={() => discardCard(true)}
 							style={styles.skipButton}
 						>
-							<Text style={styles.mutedText}>? Pular essa</Text>
+							<Text style={styles.mutedText}>Pular essa</Text>
 						</Pressable>
 					</>
 				)}
