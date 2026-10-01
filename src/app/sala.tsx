@@ -56,7 +56,6 @@ export default function SalaMultiplayerScreen() {
 		socket.disconnect(); setSalaAtiva(null);
 	}
 
-	// === AÇÕES DE JOGO ===
 	function iniciarJogo() {
 		const players = salaAtiva?.players || [];
 		if (players.length < 2) return Alert.alert('Calma aí', 'Precisamos de pelo menos 2 jogadores pra começar!');
@@ -96,10 +95,6 @@ export default function SalaMultiplayerScreen() {
 		]);
 	}
 
-	// =========================================================================
-	// RENDERIZAÇÃO DAS TELAS
-	// =========================================================================
-
 	if (salaAtiva && salaAtiva.state) {
 		const players = salaAtiva.players || [];
 		const isHost = players[0]?.id === socket.id;
@@ -109,7 +104,6 @@ export default function SalaMultiplayerScreen() {
 		const roomCode = salaAtiva.code || codigoSala.toUpperCase();
 		const cardsOnTable = salaAtiva.cardsOnTable || [];
 
-		// TELA: LOBBY DE ESPERA
 		if (salaAtiva.state === 'lobby') {
 			return (
 				<SafeAreaView style={s.screen}>
@@ -141,7 +135,6 @@ export default function SalaMultiplayerScreen() {
 			);
 		}
 
-		// TELA: JOGANDO / JULGANDO
 		if (salaAtiva.state === 'playing' || salaAtiva.state === 'judging') {
 			return (
 				<SafeAreaView style={s.screen}>
@@ -159,18 +152,16 @@ export default function SalaMultiplayerScreen() {
 
 					<ScrollView contentContainerStyle={s.playArea} keyboardShouldPersistTaps="handled">
 						{isCzar ? (
-							<Text style={s.turnAlert}>Tu és o Juiz! ⚖️</Text>
+							<Text style={s.turnAlert}>Tu é o Juiz! ⚖️</Text>
 						) : (
 							<Text style={s.turnAlert}>Juiz da rodada: {czar?.name}</Text>
 						)}
 
-						{/* CARTA PRETA (O Juiz pode clicar pra descartar) */}
 						<TouchableOpacity activeOpacity={0.8} onPress={() => handleBlackCardClick(isCzar)} style={s.blackCard}>
 							<Text style={s.blackCardText}>{salaAtiva.currentBlackCard}</Text>
 							{isCzar && salaAtiva.state === 'playing' && <Text style={s.hintText}>Toque para trocar a carta preta</Text>}
 						</TouchableOpacity>
 
-						{/* A MESA */}
 						<View style={s.tableArea}>
 							<Text style={s.label}>Cartas na Mesa</Text>
 							{salaAtiva.state === 'playing' ? (
@@ -192,7 +183,6 @@ export default function SalaMultiplayerScreen() {
 							)}
 						</View>
 
-						{/* A MÃO DO JOGADOR */}
 						{!isCzar && (
 							<View style={s.handArea}>
 								<Text style={s.label}>Tua Mão {me?.hasPlayed && '(Aguardando...)'}</Text>
@@ -215,7 +205,6 @@ export default function SalaMultiplayerScreen() {
 			);
 		}
 
-		// TELA: FIM DA RODADA
 		if (salaAtiva.state === 'round_end') {
 			return (
 				<SafeAreaView style={s.screen}>
@@ -241,7 +230,6 @@ export default function SalaMultiplayerScreen() {
 			);
 		}
 
-		// TELA: FIM DE JOGO (ALGUÉM BATEU OS 20 PONTOS)
 		if (salaAtiva.state === 'game_over') {
 			return (
 				<SafeAreaView style={s.screen}>
@@ -257,9 +245,6 @@ export default function SalaMultiplayerScreen() {
 		}
 	}
 
-	// =========================================================================
-	// TELA PADRÃO: LOGIN PARA CRIAR OU ENTRAR
-	// =========================================================================
 	return (
 		<SafeAreaView style={s.screen}>
 			<KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>

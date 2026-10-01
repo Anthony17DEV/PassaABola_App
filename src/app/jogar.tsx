@@ -356,7 +356,7 @@ function CardSession({ config, players }: { config: Omit<GenerationInput, 'exclu
 									style={styles.expandButton}
 								>
 									<Text style={styles.expandText}>
-										{expanded ? "Recolher ?" : isChallenge ? "Ver instruções +" : "Faz render +"}
+										{expanded ? "Recolher -" : isChallenge ? "Ver instruções +" : "Faz render +"}
 									</Text>
 								</Pressable>
 							</ScrollView>
