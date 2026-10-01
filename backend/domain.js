@@ -11,13 +11,13 @@ const FORMATS = ['filme', 'serie', 'musica', 'video', 'surpresa'];
 
 const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
-function requireText(value, max = 500) {
+function requireText(value, max = 1500) {
 	if (typeof value !== 'string' || !value.trim() || value.length > max) throw new ApiError(502, 'INVALID_GENERATION', 'A IA devolveu conteúdo incompleto. Tente novamente.');
 	return value.trim();
 }
 
 function validateInput(body, recommendations = false) {
-	const fail = () => { throw new ApiError(400, 'INVALID_INPUT', 'Confira os campos: vibe até 60 caracteres, até 10 temas de 60 caracteres e interesses até 600.'); };
+	const fail = () => { throw new ApiError(400, 'INVALID_INPUT', 'Confira os campos enviados.'); };
 	const field = (value, max, fallback = '') => {
 		if (value === undefined) return fallback;
 		if (typeof value !== 'string' || value.length > max || /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value)) fail();
@@ -73,13 +73,14 @@ const cardSchema = {
 	items: { type: 'OBJECT', properties: { topic: str, question: str, followUp: str, groupFollowUp: str }, required: ['topic', 'question', 'followUp', 'groupFollowUp'] },
 };
 
+// Aqui o segredo: adicionei "synopsis" pra IA inventar o resumo.
 const recommendationSchema = {
-	type: 'ARRAY', minItems: 5, maxItems: 5,
+	type: 'ARRAY', minItems: 1, maxItems: 3,
 	items: {
 		type: 'OBJECT', properties: {
 			type: { type: 'STRING', enum: ['filme', 'serie', 'musica', 'video'] },
-			title: str, creator: str, year: { type: 'INTEGER' }, reason: str, videoId: str,
-		}, required: ['type', 'title', 'creator', 'year', 'reason', 'videoId']
+			title: str, creator: str, year: { type: 'INTEGER' }, reason: str, synopsis: str
+		}, required: ['type', 'title', 'creator', 'year', 'reason', 'synopsis']
 	},
 };
 

@@ -77,8 +77,7 @@ function Recommendations({ mood, topicsRaw, format, preferences }: { mood: strin
 					<>
 						{error && <View style={s.card}><Text style={s.cardTitle}>Não deu pra buscar agora</Text><Text style={s.description}>{error}</Text></View>}
 						{items.map(item => <RecommendationCard key={item.id} item={item} onOpen={() => void open(item)} />)}
-						<Text style={s.description}>Os links abrem as fontes. Disponibilidade para assistir ou ouvir e preços podem variar. Algumas buscas podem retornar menos de três sugestões confirmadas.</Text>
-						{items.some(x => x.type === 'serie') && <Text style={s.source}>Dados de séries: TVmaze • CC BY-SA. O link do card identifica a fonte.</Text>}
+						<Text style={s.description}>As informações são geradas por inteligência artificial. Disponibilidade e preços podem variar.</Text>
 						<Pressable accessibilityRole="button" onPress={() => void load()} style={s.button}><Text style={s.buttonText}>{error ? 'Tentar novamente' : 'Manda outras ↗'}</Text></Pressable>
 					</>
 				)}
@@ -107,8 +106,7 @@ function RecommendationCard({ item, onOpen }: { item: Recommendation; onOpen: ()
 			<Text style={s.sectionLabel}>{item.synopsisLabel.toUpperCase()}</Text>
 			<Text numberOfLines={expanded ? undefined : 5} style={s.description}>{item.synopsis || 'Essa fonte não disponibilizou uma descrição.'}</Text>
 			{!!item.synopsis && item.synopsis.length > 220 && <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(x => !x)} style={s.readMore}><Text style={s.readMoreText}>{expanded ? 'Mostrar menos −' : 'Ler mais +'}</Text></Pressable>}
-			<Text style={s.source}>Fonte: {item.source}</Text>
-			<Pressable accessibilityRole="link" onPress={onOpen} style={s.button}><Text style={s.buttonText}>{item.type === 'video' ? 'Abrir no YouTube ↗' : item.type === 'musica' ? 'Abrir música na fonte ↗' : 'Ver no catálogo ↗'}</Text></Pressable>
+			<Pressable accessibilityRole="link" onPress={onOpen} style={s.button}><Text style={s.buttonText}>{item.type === 'video' ? 'Procurar no YouTube ↗' : 'Procurar onde assistir ↗'}</Text></Pressable>
 		</View>
 	</View>;
 }
