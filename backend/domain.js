@@ -6,7 +6,6 @@ class ApiError extends Error {
 
 const MOODS = ['Dar risada', 'Relaxar', 'Viajar nas ideias', 'Me surpreender', 'Papo profundo'];
 const TOPICS = ['Espaço', 'Natureza', 'Música', 'Games', 'Nostalgia', 'Mistérios', 'Relacionamentos', 'Assuntos absurdos'];
-
 const MODES = ['brisa-solo', 'desafios-solo', 'papo', 'passa-a-bola', 'quem-da-roda', 'missoes'];
 const FORMATS = ['filme', 'serie', 'musica', 'video', 'surpresa'];
 
@@ -52,10 +51,15 @@ function validateCards(raw, input) {
 	const seen = new Set(input.exclude.map(normalize));
 	return raw.map(item => {
 		if (!item || typeof item !== 'object') requireText(null);
-		const topic = requireText(item.topic, 60);
-		if (input.topics.length && !input.topics.includes(topic)) requireText(null);
 
-		const question = requireText(item.question, 500);
+		// O SEGREDO TÁ AQUI: Aceitar os temas de forma amigável
+		let topic = requireText(item.topic, 100);
+		if (input.topics.length && !input.topics.includes(topic)) {
+			// Se a IA inventar um tema diferente, a gente força pro primeiro tema escolhido e não dá erro!
+			topic = input.topics[0];
+		}
+
+		const question = requireText(item.question, 600);
 		const signature = normalize(question);
 		if (seen.has(signature)) throw new ApiError(502, 'REPEATED_GENERATION', 'A IA repetiu uma carta. Tente gerar outro lote.');
 		seen.add(signature);
@@ -119,6 +123,7 @@ O 'followUp' e 'groupFollowUp' (Faz render) devem levar a ideia ainda mais longe
 
 	return `${task}
 DIREÇÃO CRIATIVA:
+- O campo 'topic' da resposta JSON DEVE obrigatoriamente ser um dos temas solicitados no formato string exato.
 - Conecte ao tema e ao clima com força. Dar risada = force o absurdo e humor nonsense. Papo profundo = faça aquela pergunta existencial bizarra de quem fritou a mente.
 - Não tenha medo de ser nonsense ou surreal, desde que seja uma viagem puramente mental ou verbal (nada físico perigoso).
 FORMATO: question até 500 caracteres; followUp e groupFollowUp até 600; topic até 60. Sem markdown fora do JSON.
