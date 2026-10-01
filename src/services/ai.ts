@@ -1,4 +1,4 @@
-import type { ConversationCard, GenerationInput, RecommendationFormat } from '../types/ai';
+import type { ConversationCard, GenerationInput, Recommendation, RecommendationFormat } from '../types/ai';
 
 function getBaseUrl() {
 	const configured = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
@@ -8,17 +8,14 @@ function getBaseUrl() {
 	if (!__DEV__ && url.protocol !== 'https:') throw new Error('A versão publicada precisa de uma API HTTPS.');
 	return configured;
 }
-
 function record(value: unknown): Record<string, unknown> {
 	if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('O servidor devolveu uma resposta inválida.');
 	return value as Record<string, unknown>;
 }
-
 function text(value: unknown, max = 1000): string {
 	if (typeof value !== 'string' || !value.trim() || value.length > max) throw new Error('O servidor devolveu conteúdo incompleto.');
 	return value;
 }
-
 async function fetchJSON(url: string, init: RequestInit, external: AbortSignal, milliseconds: number): Promise<unknown> {
 	const controller = new AbortController();
 	let timedOut = false;
@@ -47,10 +44,8 @@ async function fetchJSON(url: string, init: RequestInit, external: AbortSignal, 
 		external.removeEventListener('abort', abort);
 	}
 }
-
 async function post(path: string, body: unknown, signal: AbortSignal) {
 	const base = getBaseUrl();
-	// Hospedagem gratuita pode estar adormecida. Acorda antes de gastar uma geração.
 	const health = record(await fetchJSON(`${base}/health`, { method: 'GET' }, signal, 90000));
 	if (health.ok !== true || health.service !== 'passa-a-bola-api') throw new Error('O endereço configurado não aponta para a API do Passa a Bola.');
 	if (signal.aborted) throw new Error('Pedido cancelado.');
@@ -58,7 +53,6 @@ async function post(path: string, body: unknown, signal: AbortSignal) {
 		method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
 	}, signal, 85000));
 }
-
 export async function requestCards(input: GenerationInput, signal: AbortSignal): Promise<ConversationCard[]> {
 	const payload = await post('/api/gerar-cartas', input, signal);
 	if (payload.source !== 'gemini' || !Array.isArray(payload.cards) || payload.cards.length !== 5) throw new Error('O servidor não retornou cinco cartas válidas.');
@@ -75,33 +69,29 @@ export async function requestCards(input: GenerationInput, signal: AbortSignal):
 		};
 	});
 }
-
 export function isSafeRecommendationUrl(value: string) {
 	try {
 		const u = new URL(value);
-		return u.protocol === 'https:' && !u.username && !u.password && ['music.apple.com', 'itunes.apple.com', 'tv.apple.com', 'www.tvmaze.com', 'tvmaze.com', 'www.youtube.com', 'www.themoviedb.org'].includes(u.hostname);
+		return u.protocol === 'https:' && !u.username && !u.password && ['music.apple.com', 'itunes.apple.com', 'tv.apple.com', 'www.tvmaze.com', 'tvmaze.com', 'www.youtube.com'].includes(u.hostname);
 	} catch { return false; }
 }
-
 export function isSafeArtworkUrl(value: unknown): value is string {
 	if (typeof value !== 'string') return false;
 	try {
 		const u = new URL(value);
 		return u.protocol === 'https:' && !u.username && !u.password && (!u.port || u.port === '443') &&
-			(u.hostname.endsWith('.mzstatic.com') || u.hostname.endsWith('.itunes.apple.com') || ['static.tvmaze.com', 'i.ytimg.com', 'img.youtube.com'].includes(u.hostname) || u.hostname.includes('tmdb.org'));
+			(u.hostname.endsWith('.mzstatic.com') || u.hostname.endsWith('.itunes.apple.com') || ['static.tvmaze.com', 'i.ytimg.com', 'img.youtube.com'].includes(u.hostname));
 	} catch { return false; }
 }
-
-export async function requestRecommendations(input: GenerationInput & { format: RecommendationFormat }, signal: AbortSignal): Promise<any[]> {
+export async function requestRecommendations(input: GenerationInput & { format: RecommendationFormat }, signal: AbortSignal): Promise<Recommendation[]> {
 	const payload = await post('/api/recomendacoes', input, signal);
 	if (payload.source !== 'gemini' || !Array.isArray(payload.items) || payload.items.length < 1 || payload.items.length > 3) throw new Error('Não recebemos sugestões confirmadas.');
 	return payload.items.map((value: unknown) => {
 		const r = record(value);
 		const url = text(r.url, 2000);
-		// Adicionado 'documentario' na lista de validação
-		if (!isSafeRecommendationUrl(url) || !['filme', 'serie', 'musica', 'video', 'documentario'].includes(String(r.type))) throw new Error('Uma sugestão veio com um link inválido.');
+		if (!isSafeRecommendationUrl(url) || !['filme', 'serie', 'musica', 'video'].includes(String(r.type))) throw new Error('Uma sugestão veio com um link inválido.');
 		return {
-			id: text(r.id, 100), type: r.type, title: text(r.title, 300),
+			id: text(r.id, 100), type: r.type as Recommendation['type'], title: text(r.title, 300),
 			creator: typeof r.creator === 'string' ? r.creator : '', reason: text(r.reason, 500), source: text(r.source, 100), url,
 			artworkUrl: isSafeArtworkUrl(r.artworkUrl) ? r.artworkUrl : null,
 			synopsis: typeof r.synopsis === 'string' && r.synopsis.length <= 1200 ? r.synopsis : null,
@@ -109,7 +99,6 @@ export async function requestRecommendations(input: GenerationInput & { format: 
 			year: typeof r.year === 'number' ? r.year : null,
 			durationMinutes: typeof r.durationMinutes === 'number' && r.durationMinutes > 0 ? r.durationMinutes : null,
 			genres: Array.isArray(r.genres) ? r.genres.filter((x): x is string => typeof x === 'string').slice(0, 6) : [],
-			providers: Array.isArray(r.providers) ? r.providers : [], // Repassa os ícones de streaming
 		};
 	});
 }

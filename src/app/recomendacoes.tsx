@@ -4,35 +4,31 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { isSafeRecommendationUrl, requestRecommendations } from '../services/ai';
-import type { RecommendationFormat } from '../types/ai';
+import type { Recommendation, RecommendationFormat } from '../types/ai';
 
 type Param = string | string[] | undefined;
 const first = (value: Param) => Array.isArray(value) ? value[0] ?? '' : value ?? '';
-const labels: Record<string, string> = { filme: 'FILME', serie: 'SÉRIE', musica: 'MÚSICA', video: 'VÍDEO', documentario: 'DOCUMENTÁRIO' };
-
+const labels = { filme: 'FILME', serie: 'SÉRIE', musica: 'MÚSICA', video: 'VÍDEO' };
 function topicsFrom(raw: string): string[] {
 	try { const result: unknown = JSON.parse(raw); return Array.isArray(result) ? result.filter((x): x is string => typeof x === 'string') : []; }
 	catch { return []; }
 }
-
 export default function RecommendationsScreen() {
 	const p = useLocalSearchParams<{ mood?: Param; temas?: Param; formato?: Param; estilo?: Param; interesses?: Param; evitar?: Param }>();
 	const mood = first(p.mood);
 	const topicsRaw = first(p.temas);
 	const rawFormat = first(p.formato);
-	const format = (['filme', 'serie', 'musica', 'video', 'documentario', 'surpresa'].includes(rawFormat) ? rawFormat : 'surpresa') as RecommendationFormat;
+	const format = (['filme', 'serie', 'musica', 'video', 'surpresa'].includes(rawFormat) ? rawFormat : 'surpresa') as RecommendationFormat;
 	const preferences = { style: first(p.estilo), interests: first(p.interesses), avoid: first(p.evitar) };
 	return <Recommendations key={JSON.stringify([mood, topicsRaw, format, preferences])} mood={mood} topicsRaw={topicsRaw} format={format} preferences={preferences} />;
 }
-
 function Recommendations({ mood, topicsRaw, format, preferences }: { mood: string; topicsRaw: string; format: RecommendationFormat; preferences: { style: string; interests: string; avoid: string } }) {
 	const preferencesKey = JSON.stringify(preferences);
-	const [items, setItems] = useState<any[]>([]);
+	const [items, setItems] = useState<Recommendation[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const history = useRef<string[]>([]);
 	const request = useRef<AbortController | null>(null);
-
 	const load = useCallback(async () => {
 		if (request.current) return;
 		const controller = new AbortController();
@@ -49,24 +45,20 @@ function Recommendations({ mood, topicsRaw, format, preferences }: { mood: strin
 			if (request.current === controller) { request.current = null; setLoading(false); }
 		}
 	}, [mood, topicsRaw, format, preferencesKey]);
-
 	useEffect(() => {
 		void load();
 		return () => { request.current?.abort(); request.current = null; };
 	}, [load]);
-
 	function back() {
 		request.current?.abort(); request.current = null;
 		if (router.canGoBack()) router.back(); else router.replace('/sessao');
 	}
-
-	async function open(item: any) {
+	async function open(item: Recommendation) {
 		try {
 			if (!isSafeRecommendationUrl(item.url)) throw new Error('invalid');
 			await Linking.openURL(item.url);
 		} catch { Alert.alert('Não foi possível abrir', 'Tente novamente em alguns instantes.'); }
 	}
-
 	return (
 		<SafeAreaView style={s.screen}>
 			<ScrollView contentContainerStyle={s.content}>
@@ -85,7 +77,7 @@ function Recommendations({ mood, topicsRaw, format, preferences }: { mood: strin
 					<>
 						{error && <View style={s.card}><Text style={s.cardTitle}>Não deu pra buscar agora</Text><Text style={s.description}>{error}</Text></View>}
 						{items.map(item => <RecommendationCard key={item.id} item={item} onOpen={() => void open(item)} />)}
-						<Text style={s.description}>Os links abrem as fontes. Disponibilidade para assistir ou ouvir e preços podem variar.</Text>
+						<Text style={s.description}>Os links abrem as fontes. Disponibilidade para assistir ou ouvir e preços podem variar. Algumas buscas podem retornar menos de três sugestões confirmadas.</Text>
 						{items.some(x => x.type === 'serie') && <Text style={s.source}>Dados de séries: TVmaze • CC BY-SA. O link do card identifica a fonte.</Text>}
 						<Pressable accessibilityRole="button" onPress={() => void load()} style={s.button}><Text style={s.buttonText}>{error ? 'Tentar novamente' : 'Manda outras ↗'}</Text></Pressable>
 					</>
@@ -94,13 +86,11 @@ function Recommendations({ mood, topicsRaw, format, preferences }: { mood: strin
 		</SafeAreaView>
 	);
 }
-
-function RecommendationCard({ item, onOpen }: { item: any; onOpen: () => void }) {
+function RecommendationCard({ item, onOpen }: { item: Recommendation; onOpen: () => void }) {
 	const [imageFailed, setImageFailed] = useState(false);
 	const [expanded, setExpanded] = useState(false);
-	const poster = ['filme', 'serie', 'documentario'].includes(item.type);
+	const poster = item.type === 'filme' || item.type === 'serie';
 	const imageAvailable = !!item.artworkUrl && !imageFailed;
-
 	return <View style={s.recommendationCard}>
 		<Pressable accessibilityRole="link" accessibilityLabel={`Abrir ${item.title} na fonte`} onPress={onOpen} style={[s.artworkBox, { aspectRatio: poster ? 0.8 : item.type === 'musica' ? 1 : 16 / 9 }]}>
 			{imageAvailable
@@ -122,7 +112,6 @@ function RecommendationCard({ item, onOpen }: { item: any; onOpen: () => void })
 		</View>
 	</View>;
 }
-
 const s = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: '#0B140F' },
 	recommendationCard: { backgroundColor: '#18271D', borderRadius: 26, marginTop: 24, borderWidth: 1, borderColor: '#334A39', overflow: 'hidden' },

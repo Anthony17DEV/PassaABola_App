@@ -2,26 +2,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CHALLENGE_STYLES, MOODS, RECOMMENDATION_STYLES, TALK_STYLES, TOPICS } from '../config/session-options';
+import { CHALLENGE_STYLES, FORMATS, MOODS, RECOMMENDATION_STYLES, TALK_STYLES, TOPICS } from '../config/session-options';
 
 type Param = string | string[] | undefined;
 const first = (p: Param) => Array.isArray(p) ? p[0] ?? '' : p ?? '';
-
-const APP_FORMATS = [
-	{ id: 'filme', label: 'Filme' },
-	{ id: 'serie', label: 'Série' },
-	{ id: 'documentario', label: 'Documentário' },
-	{ id: 'musica', label: 'Música' },
-	{ id: 'video', label: 'Vídeo' },
-	{ id: 'surpresa', label: 'Surpresa' }
-];
-
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
 	return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [s.chip, selected && s.chipSelected, pressed && { opacity: 0.75 }]}>
 		<Text style={[s.chipText, selected && s.chipTextSelected]}>{label}</Text>
 	</Pressable>;
 }
-
 function CustomChoice({ placeholder, onAdd, maxLength = 60 }: { placeholder: string; onAdd: (value: string) => void; maxLength?: number }) {
 	const [value, setValue] = useState('');
 	function add() { const next = value.trim(); if (!next) return; onAdd(next); setValue(''); Keyboard.dismiss(); }
@@ -30,7 +19,6 @@ function CustomChoice({ placeholder, onAdd, maxLength = 60 }: { placeholder: str
 		<Pressable accessibilityRole="button" accessibilityLabel="Adicionar opção personalizada" disabled={!value.trim()} onPress={add} style={[s.add, !value.trim() && { opacity: 0.4 }]}><Text style={s.addText}>+</Text></Pressable>
 	</View>;
 }
-
 export default function VibeScreen() {
 	const p = useLocalSearchParams<{ sessao?: Param; modo?: Param; titulo?: Param }>();
 	const mode = first(p.modo);
@@ -76,8 +64,7 @@ export default function VibeScreen() {
 				<Text style={s.eyebrow}>{first(p.titulo).toUpperCase() || 'DO SEU JEITO'}</Text>
 				<Text accessibilityRole="header" style={s.title}>{recommendations ? 'O que combina\ncontigo?' : isChallenge ? 'Qual vai ser\no desafio?' : 'Puxa um assunto\nque tu curte.'}</Text>
 				<Text style={s.description}>Escolhe uma opção ou inventa a tua. Quanto mais contexto, mais a sessão fica com tua cara.</Text>
-
-				{recommendations && <><Text style={s.label}>Quero assistir ou ouvir...</Text><View style={s.chips}>{APP_FORMATS.map(x => <Chip key={x.id} label={x.label} selected={format === x.id} onPress={() => setFormat(x.id)} />)}</View></>}
+				{recommendations && <><Text style={s.label}>Quero assistir ou ouvir...</Text><View style={s.chips}>{FORMATS.map(x => <Chip key={x.id} label={x.label} selected={format === x.id} onPress={() => setFormat(x.id)} />)}</View></>}
 
 				<Text style={s.label}>Qual é o clima?</Text>
 				<View style={s.chips}>{moods.map(x => <Chip key={x} label={x} selected={mood === x} onPress={() => setMood(x)} />)}</View>
@@ -93,11 +80,11 @@ export default function VibeScreen() {
 				<CustomChoice placeholder="Ex.: anime, rap, vida de programador" onAdd={addTopic} />
 
 				<Text style={s.label}>Conta mais do que tu curte</Text>
-				<TextInput accessibilityLabel="Seus interesses e referências" multiline value={interests} onChangeText={setInterests} maxLength={600} placeholder={recommendations ? 'Ex.: gosto de suspense que prende, rap melódico e documentário sobre espaço. Quero fugir dos óbvios.' : 'Ex.: curto Naruto, rap, jogos antigos e zoar as bizarrices de trampar em TI.'} placeholderTextColor="#82918A" style={[s.input, s.multiline]} />
+				<TextInput accessibilityLabel="Seus interesses e referências" multiline value={interests} onChangeText={setInterests} maxLength={600} placeholder={recommendations ? 'Ex.: gosto de suspense que prende, rap melódico e documentário sobre espaço. Quero fugir dos títulos óbvios.' : 'Ex.: curto Naruto, rap, jogos antigos e zoar as situações absurdas de trabalhar com tecnologia.'} placeholderTextColor="#82918A" style={[s.input, s.multiline]} />
 				<Text style={s.counter}>{interests.length}/600</Text>
 
 				<Text style={s.label}>Tem algo que tu quer evitar?</Text>
-				<TextInput accessibilityLabel="Assuntos a evitar" multiline value={avoid} onChangeText={setAvoid} maxLength={300} placeholder="Opcional: terror, romance meloso, spoilers..." placeholderTextColor="#82918A" style={[s.input, s.multilineSmall]} />
+				<TextInput accessibilityLabel="Assuntos a evitar" multiline value={avoid} onChangeText={setAvoid} maxLength={300} placeholder="Opcional: terror, papo de relacionamento, spoilers..." placeholderTextColor="#82918A" style={[s.input, s.multilineSmall]} />
 
 				<View style={s.summary}><Text style={s.eyebrow}>TUA SESSÃO</Text><Text style={s.summaryTitle}>{mood}</Text><Text style={s.description}>{style}{'\n'}{topics.length ? topics.join(' • ') : 'Temas livres'}</Text></View>
 				{canStart && <Pressable accessibilityRole="button" onPress={start} style={({ pressed }) => [s.start, pressed && { opacity: 0.8 }]}><Text style={s.startText}>{recommendations ? 'Encontrar minha próxima descoberta ↗' : 'Bora começar ↗'}</Text></Pressable>}
@@ -105,7 +92,6 @@ export default function VibeScreen() {
 		</KeyboardAvoidingView>
 	</SafeAreaView>;
 }
-
 const s = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: '#0B140F' },
 	content: { padding: 24, paddingBottom: 48, maxWidth: 620, width: '100%', alignSelf: 'center' },

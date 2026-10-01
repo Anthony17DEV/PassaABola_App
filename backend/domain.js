@@ -7,7 +7,7 @@ class ApiError extends Error {
 const MOODS = ['Dar risada', 'Relaxar', 'Viajar nas ideias', 'Me surpreender', 'Papo profundo'];
 const TOPICS = ['Espaço', 'Natureza', 'Música', 'Games', 'Nostalgia', 'Mistérios', 'Relacionamentos', 'Assuntos absurdos'];
 const MODES = ['brisa-solo', 'desafios-solo', 'papo'];
-const FORMATS = ['filme', 'serie', 'musica', 'video', 'documentario', 'surpresa'];
+const FORMATS = ['filme', 'serie', 'musica', 'video', 'surpresa'];
 
 const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
@@ -77,7 +77,7 @@ const recommendationSchema = {
 	type: 'ARRAY', minItems: 5, maxItems: 5,
 	items: {
 		type: 'OBJECT', properties: {
-			type: { type: 'STRING', enum: ['filme', 'serie', 'musica', 'video', 'documentario'] },
+			type: { type: 'STRING', enum: ['filme', 'serie', 'musica', 'video'] },
 			title: str, creator: str, year: { type: 'INTEGER' }, reason: str, videoId: str,
 		}, required: ['type', 'title', 'creator', 'year', 'reason', 'videoId']
 	},
