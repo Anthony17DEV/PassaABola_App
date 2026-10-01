@@ -19,12 +19,17 @@ function CustomChoice({ placeholder, onAdd, maxLength = 60 }: { placeholder: str
 		<Pressable accessibilityRole="button" accessibilityLabel="Adicionar opção personalizada" disabled={!value.trim()} onPress={add} style={[s.add, !value.trim() && { opacity: 0.4 }]}><Text style={s.addText}>+</Text></Pressable>
 	</View>;
 }
+
 export default function VibeScreen() {
 	const p = useLocalSearchParams<{ sessao?: Param; modo?: Param; titulo?: Param }>();
+	const sessionType = first(p.sessao);
 	const mode = first(p.modo);
+
+	const isGroup = sessionType === 'amigos';
 	const isChallenge = mode === 'desafios-solo';
 	const recommendations = mode === 'recomendacoes';
 	const defaults = isChallenge ? CHALLENGE_STYLES : recommendations ? RECOMMENDATION_STYLES : TALK_STYLES;
+
 	const [mood, setMood] = useState('Dar risada');
 	const [moods, setMoods] = useState(MOODS);
 	const [topics, setTopics] = useState<string[]>([]);
@@ -34,7 +39,7 @@ export default function VibeScreen() {
 	const [interests, setInterests] = useState('');
 	const [avoid, setAvoid] = useState('');
 	const [format, setFormat] = useState('surpresa');
-	const canStart = ['brisa-solo', 'desafios-solo', 'papo'].includes(mode) || (recommendations && first(p.sessao) !== 'amigos');
+	const canStart = ['brisa-solo', 'desafios-solo', 'papo', 'passa-a-bola', 'quem-da-roda', 'missoes'].includes(mode) || recommendations;
 
 	function toggleTopic(topic: string) {
 		if (!topics.includes(topic) && topics.length >= 10) { Alert.alert('Até dez temas', 'Desmarca um tema para incluir outro.'); return; }
@@ -47,16 +52,32 @@ export default function VibeScreen() {
 		if (!existing) setCustomTopics(current => [...current, topic]);
 		setTopics(current => current.includes(topic) ? current : [...current, topic]);
 	}
+
 	function start() {
 		if (!canStart) return;
 		Keyboard.dismiss();
-		router.push({
-			pathname: recommendations ? '/recomendacoes' : '/jogar', params: {
-				modo: mode, mood, temas: JSON.stringify(topics), formato: format,
-				estilo: style, interesses: interests.trim(), evitar: avoid.trim(),
-			}
-		});
+
+		const nextParams = {
+			sessao: sessionType,
+			modo: mode,
+			mood,
+			temas: JSON.stringify(topics),
+			formato: format,
+			estilo: style,
+			interesses: interests.trim(),
+			evitar: avoid.trim(),
+		};
+
+		if (recommendations) {
+			router.push({ pathname: '/recomendacoes', params: nextParams });
+		} else if (isGroup) {
+			// Se for com amigos, vai pra tela de adicionar a galera antes de jogar
+			router.push({ pathname: '/jogadores', params: nextParams });
+		} else {
+			router.push({ pathname: '/jogar', params: nextParams });
+		}
 	}
+
 	return <SafeAreaView style={s.screen}>
 		<KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 			<ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
@@ -87,11 +108,12 @@ export default function VibeScreen() {
 				<TextInput accessibilityLabel="Assuntos a evitar" multiline value={avoid} onChangeText={setAvoid} maxLength={300} placeholder="Opcional: terror, papo de relacionamento, spoilers..." placeholderTextColor="#82918A" style={[s.input, s.multilineSmall]} />
 
 				<View style={s.summary}><Text style={s.eyebrow}>TUA SESSÃO</Text><Text style={s.summaryTitle}>{mood}</Text><Text style={s.description}>{style}{'\n'}{topics.length ? topics.join(' • ') : 'Temas livres'}</Text></View>
-				{canStart && <Pressable accessibilityRole="button" onPress={start} style={({ pressed }) => [s.start, pressed && { opacity: 0.8 }]}><Text style={s.startText}>{recommendations ? 'Encontrar minha próxima descoberta ↗' : 'Bora começar ↗'}</Text></Pressable>}
+				{canStart && <Pressable accessibilityRole="button" onPress={start} style={({ pressed }) => [s.start, pressed && { opacity: 0.8 }]}><Text style={s.startText}>{recommendations ? 'Encontrar minha próxima descoberta ↗' : isGroup ? 'Adicionar jogadores ↗' : 'Bora começar ↗'}</Text></Pressable>}
 			</ScrollView>
 		</KeyboardAvoidingView>
 	</SafeAreaView>;
 }
+
 const s = StyleSheet.create({
 	screen: { flex: 1, backgroundColor: '#0B140F' },
 	content: { padding: 24, paddingBottom: 48, maxWidth: 620, width: '100%', alignSelf: 'center' },

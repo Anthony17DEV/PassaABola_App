@@ -6,7 +6,8 @@ class ApiError extends Error {
 
 const MOODS = ['Dar risada', 'Relaxar', 'Viajar nas ideias', 'Me surpreender', 'Papo profundo'];
 const TOPICS = ['Espaço', 'Natureza', 'Música', 'Games', 'Nostalgia', 'Mistérios', 'Relacionamentos', 'Assuntos absurdos'];
-const MODES = ['brisa-solo', 'desafios-solo', 'papo'];
+
+const MODES = ['brisa-solo', 'desafios-solo', 'papo', 'passa-a-bola', 'quem-da-roda', 'missoes'];
 const FORMATS = ['filme', 'serie', 'musica', 'video', 'surpresa'];
 
 const normalize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -23,6 +24,7 @@ function validateInput(body, recommendations = false) {
 		if (typeof value !== 'string' || value.length > max || /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(value)) fail();
 		return value.trim();
 	};
+
 	if (!body || typeof body !== 'object' || Array.isArray(body)) fail();
 	if (!(recommendations ? body.mode === 'recomendacoes' : MODES.includes(body.mode))) fail();
 
@@ -40,7 +42,7 @@ function validateInput(body, recommendations = false) {
 
 	return {
 		mode: body.mode, mood, topics: [...new Set(topics)], exclude, format,
-		style: field(body.style, 100, body.mode === 'desafios-solo' ? 'Criatividade e improviso' : 'Humor de resenha'),
+		style: field(body.style, 100, (body.mode === 'desafios-solo' || body.mode === 'missoes') ? 'Criatividade e improviso' : 'Humor de resenha'),
 		interests: field(body.interests, 600), avoid: field(body.avoid, 300),
 	};
 }
@@ -58,11 +60,13 @@ function validateCards(raw, input) {
 		if (seen.has(signature)) throw new ApiError(502, 'REPEATED_GENERATION', 'A IA repetiu uma carta. Tente gerar outro lote.');
 		seen.add(signature);
 
+		const isAction = ['desafios-solo', 'missoes', 'passa-a-bola'].includes(input.mode);
+
 		return {
 			id: randomUUID(), topic, moods: [input.mood], question,
 			followUp: requireText(item.followUp, 600),
 			groupFollowUp: requireText(item.groupFollowUp, 600),
-			kind: input.mode === 'desafios-solo' ? 'challenge' : 'question',
+			kind: isAction ? 'challenge' : 'question',
 		};
 	});
 }
@@ -73,7 +77,6 @@ const cardSchema = {
 	items: { type: 'OBJECT', properties: { topic: str, question: str, followUp: str, groupFollowUp: str }, required: ['topic', 'question', 'followUp', 'groupFollowUp'] },
 };
 
-// Aqui o segredo: adicionei "synopsis" pra IA inventar o resumo.
 const recommendationSchema = {
 	type: 'ARRAY', minItems: 1, maxItems: 3,
 	items: {
@@ -93,16 +96,26 @@ Não proponha consumo de mais drogas, dirigir, prender respiração, riscos fís
 Não seja coach, não dê lição de moral, não justifique suas respostas. Entregue apenas o entretenimento purinho e imersivo.`;
 
 function cardPrompt(input) {
-	const challenge = input.mode === 'desafios-solo';
-	const task = challenge
-		? `Crie exatamente 5 desafios SOLO para quem tá na brisa. Têm que ser tarefas concretas e MUITO zoeiras, absurdas ou viajadas.
-Cada desafio deve durar de 30 a 90 segundos, sem precisar de equipamento, feito ali no sofá mesmo.
-A 'question' é a chamada direta com a tarefa maluca. O 'followUp' (Faz render) traz um twist ou uma regra extra pra deixar o desafio caótico.
-O 'groupFollowUp' repete a orientação.`
-		: `Crie exatamente 5 cartas de reflexão ou conversa para ${input.mode === 'papo' ? 'uma roda de amigos na brisa' : 'uma pessoa viajando nas ideias e pensando sozinha (Brisa solo)'}.
-Cada carta tem que gerar aquela reação: "Caralho, que brisa, nunca parei pra pensar nisso".
-O 'followUp' (Faz render) deve levar a ideia ainda mais longe na loucura ou numa consequência absurda.
-O 'groupFollowUp' envolve o grupo sem constranger.`;
+	const mode = input.mode;
+	let task = '';
+
+	if (mode === 'desafios-solo' || mode === 'missoes') {
+		task = `Crie exatamente 5 desafios (ações). Têm que ser tarefas concretas e MUITO zoeiras, absurdas ou viajadas de improviso.
+A 'question' é a chamada direta com a tarefa maluca (sem precisar de equipamento). 
+O 'followUp' (Faz render) e o 'groupFollowUp' trazem um twist ou uma regra extra pra deixar o desafio caótico.`;
+	} else if (mode === 'quem-da-roda') {
+		task = `Crie exatamente 5 cartas do tipo "Quem da roda...". O objetivo é a galera apontar o dedo e julgar os amigos de forma engraçada e zoeira.
+A 'question' deve ser uma situação bizarra, constrangedora ou específica (Ex: "Quem da roda tem mais chance de ser abduzido porque tentou puxar papo com o ET?").
+O 'followUp' e 'groupFollowUp' (Faz render) devem pedir para a pessoa escolhida se defender ou fazer a roda justificar o voto.`;
+	} else if (mode === 'passa-a-bola') {
+		task = `Crie exatamente 5 cartas para um jogo de turnos acelerado. Misture perguntas inusitadas rápidas e mini-desafios verbais para quem está com o celular.
+A 'question' é a pergunta ou desafio focado na pessoa da vez.
+O 'followUp' e 'groupFollowUp' (Faz render) trazem uma consequência ou desdobramento pra galera rir junto.`;
+	} else {
+		task = `Crie exatamente 5 cartas de reflexão ou conversa para ${mode === 'papo' ? 'uma roda de amigos na brisa' : 'uma pessoa viajando nas ideias e pensando sozinha (Brisa solo)'}.
+A 'question' tem que gerar aquela reação: "Caralho, nunca parei pra pensar nisso".
+O 'followUp' e 'groupFollowUp' (Faz render) devem levar a ideia ainda mais longe na loucura ou numa consequência absurda.`;
+	}
 
 	return `${task}
 DIREÇÃO CRIATIVA:
